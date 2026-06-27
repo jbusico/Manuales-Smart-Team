@@ -69,7 +69,6 @@
             const [menuOpen, setMenuOpen] = React.useState(true);
             const [searchTerm, setSearchTerm] = React.useState('');
             const [historial, setHistorial] = React.useState([]);
-            const [openInSameTab, setOpenInSameTab] = React.useState(false);
 
             const manuales = [
                 { id: 1, nombre: 'Manual Docente 1', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-1/' },
@@ -110,11 +109,7 @@
             });
 
             const handleOpenManual = (url) => {
-                if (openInSameTab) {
-                    window.location.href = url;
-                } else {
-                    window.open(url, '_blank');
-                }
+                window.location.href = url;
             };
 
             const handleSelectManual = (manual) => {
@@ -277,19 +272,6 @@
                                                 <span>Abrir Manual</span>
                                             </button>
 
-                                            {/* Toggle abrir en misma pestaña */}
-                                            <button
-                                                onClick={() => setOpenInSameTab(!openInSameTab)}
-                                                className={`
-                                                    font-semibold py-2 px-4 rounded-lg transition-all duration-200
-                                                    ${openInSameTab 
-                                                        ? 'bg-gray-700 text-white' 
-                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                    }
-                                                `}
-                                            >
-                                                {openInSameTab ? '🔄 Abriendo en esta pestaña' : '📂 Abrir en nueva pestaña'}
-                                            </button>
                                         </div>
 
                                         {/* Tip */}
