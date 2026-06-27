@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="Manuales Docentes LDtron - App de acceso rápido para docentes">
+    
+    <title>LDtron - Manuales Docentes</title>
+    
+    <!-- Manifest para PWA -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Estilos Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%232563eb'>📚</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%232563eb' width='180' height='180'/><text x='90' y='120' font-size='120' fill='white' text-anchor='middle'>📚</text></svg>">
+    
+    <style>
+        * { -webkit-user-select: none; user-select: none; }
+        input, textarea, button { -webkit-user-select: text; user-select: text; }
+        body { -webkit-touch-callout: none; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Lucide Icons Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+        }
+
+        // Detectar instalación PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            deferredPrompt = e;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA instalada exitosamente');
+        });
+    </script>
+
+    <!-- App React -->
+    <script type="text/babel">
+        const { ChevronRight, BookOpen, Menu, X, ExternalLink, Search, Clock, Zap } = window.lucide;
+
+        function ManualesdocentesApp() {
+            const [selectedManual, setSelectedManual] = React.useState(null);
+            const [menuOpen, setMenuOpen] = React.useState(true);
+            const [searchTerm, setSearchTerm] = React.useState('');
+            const [historial, setHistorial] = React.useState([]);
+            const [openInSameTab, setOpenInSameTab] = React.useState(false);
+
+            const manuales = [
+                { id: 1, nombre: 'Manual Docente 1', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-1/' },
+                { id: 2, nombre: 'Manual Docente 2', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-2/' },
+                { id: 3, nombre: 'Manual Docente 3', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-3/' },
+                { id: 4, nombre: 'Manual Docente 4', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-4/' },
+                { id: 5, nombre: 'Manual Docente 5', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-5/' },
+                { id: 6, nombre: 'Manual Docente 6', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-6/' },
+                { id: 7, nombre: 'Manual Docente 7', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-7/' },
+                { id: 8, nombre: 'Manual Docente 8', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-8/' },
+                { id: 9, nombre: 'Manual Docente 9', url: 'https://campus.smartteamdigital.com/01_LDtron/Manual-docente-9/' },
+            ];
+
+            // Cargar historial del localStorage
+            React.useEffect(() => {
+                const saved = localStorage.getItem('ldtron-historial');
+                if (saved) {
+                    setHistorial(JSON.parse(saved));
+                }
+            }, []);
+
+            // Filtrar manuales según búsqueda
+            const manualesFiltrados = manuales.filter(m => 
+                m.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            // Ordenar: últimos abiertos primero
+            const manualesmOrdenados = [...manualesFiltrados].sort((a, b) => {
+                const aEnHistorial = historial.find(h => h.id === a.id);
+                const bEnHistorial = historial.find(h => h.id === b.id);
+                
+                if (aEnHistorial && !bEnHistorial) return -1;
+                if (!aEnHistorial && bEnHistorial) return 1;
+                if (aEnHistorial && bEnHistorial) {
+                    return new Date(bEnHistorial.fecha) - new Date(aEnHistorial.fecha);
+                }
+                return 0;
+            });
+
+            const handleOpenManual = (url) => {
+                if (openInSameTab) {
+                    window.location.href = url;
+                } else {
+                    window.open(url, '_blank');
+                }
+            };
+
+            const handleSelectManual = (manual) => {
+                setSelectedManual(manual);
+                setMenuOpen(false);
+                
+                // Agregar al historial
+                const nuevoHistorial = [
+                    { id: manual.id, nombre: manual.nombre, fecha: new Date().toISOString() },
+                    ...historial.filter(h => h.id !== manual.id)
+                ].slice(0, 5); // Guardar solo últimos 5
+                
+                setHistorial(nuevoHistorial);
+                localStorage.setItem('ldtron-historial', JSON.stringify(nuevoHistorial));
+            };
+
+            // Atajo de teclado: Enter abre manual
+            React.useEffect(() => {
+                const handleKeyPress = (e) => {
+                    if (e.key === 'Enter' && selectedManual) {
+                        handleOpenManual(selectedManual.url);
+                    }
+                    if (e.key === 'Escape') {
+                        setSearchTerm('');
+                    }
+                };
+                window.addEventListener('keydown', handleKeyPress);
+                return () => window.removeEventListener('keydown', handleKeyPress);
+            }, [selectedManual, openInSameTab]);
+
+            const ultimoAbierto = historial.length > 0 ? manuales.find(m => m.id === historial[0].id) : null;
+
+            return (
+                <div className="flex h-screen bg-gray-50">
+                    {/* SIDEBAR */}
+                    <div className={`
+                        fixed md:relative w-full md:w-80 h-screen bg-gradient-to-b from-blue-600 to-blue-700 
+                        text-white shadow-xl transition-all duration-300 z-40 flex flex-col
+                        ${menuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                    `}>
+                        {/* Header */}
+                        <div className="p-6 border-b border-blue-500 flex-shrink-0">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span style={{ fontSize: '2rem' }}>📚</span>
+                                <div>
+                                    <h1 className="text-2xl font-bold">LDtron</h1>
+                                    <p className="text-blue-100 text-xs">Manuales Docentes</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Búsqueda */}
+                        <div className="p-4 border-b border-blue-500 flex-shrink-0">
+                            <div className="relative">
+                                <Search size={18} className="absolute left-3 top-3 text-blue-200" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar manual..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 rounded-lg bg-blue-500 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        {/* Último abierto */}
+                        {ultimoAbierto && (
+                            <div className="px-4 pt-3 pb-2 border-b border-blue-500 flex-shrink-0">
+                                <p className="text-xs text-blue-100 mb-1 flex items-center gap-1">
+                                    <Clock size={12} /> Último abierto
+                                </p>
+                                <button
+                                    onClick={() => handleSelectManual(ultimoAbierto)}
+                                    className="w-full text-left px-3 py-2 rounded-lg bg-blue-500 text-white font-semibold text-sm hover:bg-blue-400 transition-colors"
+                                >
+                                    {ultimoAbierto.nombre}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Lista de Manuales */}
+                        <div className="overflow-y-auto flex-1 px-4 pt-4 pb-4">
+                            <nav className="space-y-2">
+                                {manualesmOrdenados.length > 0 ? (
+                                    manualesmOrdenados.map((manual) => (
+                                        <button
+                                            key={manual.id}
+                                            onClick={() => handleSelectManual(manual)}
+                                            className={`
+                                                w-full text-left px-4 py-3 rounded-lg transition-all duration-200
+                                                flex items-center justify-between group text-sm
+                                                ${selectedManual?.id === manual.id 
+                                                    ? 'bg-white text-blue-700 font-semibold shadow-md' 
+                                                    : 'text-blue-50 hover:bg-blue-500 active:bg-blue-600'
+                                                }
+                                            `}
+                                        >
+                                            <span>{manual.nombre}</span>
+                                            <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                    ))
+                                ) : (
+                                    <p className="text-blue-100 text-sm text-center py-4">No se encontraron manuales</p>
+                                )}
+                            </nav>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-3 bg-blue-800 text-xs text-blue-100 border-t border-blue-500 flex-shrink-0">
+                            <p>✓ {manualesFiltrados.length} de {manuales.length}</p>
+                            <p className="mt-1 opacity-75">Presiona Enter para abrir</p>
+                        </div>
+                    </div>
+
+                    {/* CONTENIDO PRINCIPAL */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Header Móvil */}
+                        <div className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                            <button
+                                onClick={() => setMenuOpen(!menuOpen)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                {menuOpen ? <X size={24} /> : <Menu size={24} />}
+                            </button>
+                            <h2 className="font-semibold text-gray-800 flex-1 text-center text-sm truncate">
+                                {selectedManual?.nombre || 'Selecciona un manual'}
+                            </h2>
+                            <div style={{ width: '40px' }} />
+                        </div>
+
+                        {/* Contenido */}
+                        <div className="flex-1 overflow-auto bg-gray-50">
+                            {selectedManual ? (
+                                <div className="h-full flex flex-col">
+                                    {/* Vista Manual */}
+                                    <div className="flex flex-col items-center justify-center h-full gap-6 p-6">
+                                        <div className="text-center">
+                                            <div style={{ fontSize: '5rem' }} className="mb-4 opacity-50">📖</div>
+                                            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                                                {selectedManual.nombre}
+                                            </h3>
+                                            <p className="text-gray-600 text-sm mb-8 max-w-xs">
+                                                Abre este manual en el campus online para leer el contenido completo
+                                            </p>
+                                        </div>
+
+                                        {/* Botones */}
+                                        <div className="flex flex-col gap-4 w-full max-w-sm">
+                                            <button
+                                                onClick={() => handleOpenManual(selectedManual.url)}
+                                                className="
+                                                    bg-blue-600 hover:bg-blue-700 active:bg-blue-800
+                                                    text-white font-bold py-4 px-8 rounded-xl
+                                                    flex items-center justify-center gap-3 shadow-lg transition-all duration-200
+                                                    transform active:scale-95 text-lg
+                                                "
+                                            >
+                                                <ExternalLink size={24} />
+                                                <span>Abrir Manual</span>
+                                            </button>
+
+                                            {/* Toggle abrir en misma pestaña */}
+                                            <button
+                                                onClick={() => setOpenInSameTab(!openInSameTab)}
+                                                className={`
+                                                    font-semibold py-2 px-4 rounded-lg transition-all duration-200
+                                                    ${openInSameTab 
+                                                        ? 'bg-gray-700 text-white' 
+                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    }
+                                                `}
+                                            >
+                                                {openInSameTab ? '🔄 Abriendo en esta pestaña' : '📂 Abrir en nueva pestaña'}
+                                            </button>
+                                        </div>
+
+                                        {/* Tip */}
+                                        <p className="text-gray-500 text-xs text-center max-w-xs mt-4">
+                                            💡 Presiona <kbd className="bg-gray-200 px-2 py-1 rounded text-gray-700">Enter</kbd> para abrir rápidamente
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+                                    <div style={{ fontSize: '5rem' }} className="opacity-50">📚</div>
+                                    <h3 className="text-2xl font-bold text-gray-600">Selecciona un manual</h3>
+                                    <p className="text-gray-500 text-center text-sm max-w-xs">
+                                        Elige uno de la lista para comenzar a leer
+                                    </p>
+                                    {ultimoAbierto && (
+                                        <button
+                                            onClick={() => handleSelectManual(ultimoAbierto)}
+                                            className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                                        >
+                                            <Zap size={20} className="inline mr-2" />
+                                            Continuar con último
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Overlay */}
+                    {menuOpen && (
+                        <div
+                            className="fixed inset-0 bg-black bg-opacity-50 md:hidden z-30"
+                            onClick={() => setMenuOpen(false)}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ManualesdocentesApp />);
+    </script>
+</body>
+</html>
