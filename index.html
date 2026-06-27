@@ -138,7 +138,7 @@
                 };
                 window.addEventListener('keydown', handleKeyPress);
                 return () => window.removeEventListener('keydown', handleKeyPress);
-            }, [selectedManual, openInSameTab]);
+            }, [selectedManual]);
 
             const ultimoAbierto = historial.length > 0 ? manuales.find(m => m.id === historial[0].id) : null;
 
